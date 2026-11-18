@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Display Control Center</title>
+<style>
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#eaf0f7;background:#0b1220}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1000px;margin:auto;padding:28px 18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px}.brand{font-size:22px;font-weight:800;letter-spacing:-.5px}.muted{color:#9baabd}.panel{background:#121d2e;border:1px solid #26364d;border-radius:16px;padding:20px;margin:14px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}input,select,button{font:inherit;border-radius:9px;padding:11px 12px;border:1px solid #34465f;background:#0d1727;color:#eaf0f7;width:100%;margin:5px 0}button{background:#2563eb;border:0;font-weight:700;cursor:pointer}button.secondary{background:#26364d}button.danger{background:#783b45}.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}.hidden{display:none!important}.device{border:1px solid #2b3b52;border-radius:12px;padding:14px}.status{font-size:12px;color:#a9d9bb}.token{font-family:monospace;overflow-wrap:anywhere;background:#0a1320;padding:10px;border-radius:8px}.notice{padding:12px;background:#172a43;border-radius:10px;color:#c9d8eb}.small{font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{width:auto;flex:1;min-width:100px}
+</style>
+</head>
+<body><main class="wrap">
+<header><div><div class="brand">DISPLAY CONTROL CENTER</div><div class="muted small">Private prototype · Cloud-connected ESP32 displays</div></div><button id="logout" class="secondary hidden" style="width:auto">Sign out</button></header>
+<section id="setup" class="panel">
+<h2>Connect your Supabase project</h2><p class="muted">Enter your Supabase project URL and publishable anon key. These are public client settings; never put a service-role key here.</p>
+<label>Project URL<input id="projectUrl" placeholder="https://your-project.supabase.co"></label>
+<label>Publishable anon key<input id="anonKey" placeholder="sb_publishable_... or legacy anon key"></label>
+<button id="saveConfig">Connect</button><p class="muted small">This prototype keeps these two public settings in this browser's local storage.</p>
+</section>
+<section id="auth" class="panel hidden"><h2>Administrator sign in</h2><p class="muted">Use your email to receive a secure sign-in link.</p><input id="email" type="email" placeholder="you@example.com"><button id="sendLink">Send sign-in link</button><p id="authMsg" class="muted small"></p></section>
+<section id="app" class="hidden">
+<div class="panel"><div class="row"><div><h2 style="margin:0">Your displays</h2><div class="muted small">Register a device, then use its credentials in the ESP32 firmware.</div></div><button id="addDevice" style="max-width:180px">＋ Add display</button></div><div id="deviceList" class="grid" style="margin-top:16px"></div></div>
+<div class="panel"><h2>Send a command</h2><p class="muted small">Commands are queued in the cloud. The ESP32 firmware integration is the next step; the current Arduino sketch does not yet poll this queue.</p><label>Display<select id="targetDevice"></select></label><label>Command<select id="commandType"><option value="set_item_id">Change eBay item ID</option><option value="refresh">Refresh eBay listing</option><option value="set_brightness">Set brightness</option><option value="set_price">Set custom price (firmware update required)</option><option value="set_text">Set custom text (firmware update required)</option></select></label><div id="commandValueWrap"><label>Value<input id="commandValue" placeholder="Enter item ID, price, brightness, or text"></label></div><button id="sendCommand">Queue command</button><p id="commandMsg" class="muted small"></p></div>
+</section>
+<div id="toast" class="muted small"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let sb=null, devices=[];
+const $=id=>document.getElementById(id);
+function show(id,on=true){$(id).classList.toggle('hidden',!on)}
+function msg(id,s){$(id).textContent=s}
+function cfg(){return {url:localStorage.getItem('dcc_url')||'',key:localStorage.getItem('dcc_key')||''}}
+function token(){const b=new Uint8Array(32);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')}
+async function sha256(s){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(d),x=>x.toString(16).padStart(2,'0')).join('')}
+async function connect(){const c=cfg();if(!c.url||!c.key){show('setup');show('auth',false);show('app',false);return}sb=window.supabase.createClient(c.url,c.key);show('setup',false);const {data:{session}}=await sb.auth.getSession();if(session){show('auth',false);show('app');show('logout');await loadDevices()}else{show('auth');show('app',false)}}
+$('saveConfig').onclick=()=>{localStorage.setItem('dcc_url',$('projectUrl').value.trim());localStorage.setItem('dcc_key',$('anonKey').value.trim());connect()};
+const c=cfg();$('projectUrl').value=c.url;$('anonKey').value=c.key;
+$('sendLink').onclick=async()=>{const {error}=await sb.auth.signInWithOtp({email:$('email').value,options:{emailRedirectTo:location.origin}});msg('authMsg',error?error.message:'Sign-in link sent. Check your email.')};
+$('logout').onclick=async()=>{await sb.auth.signOut();connect()};
+if(cfg().url&&cfg().key){connect()}else{show('setup');}
+if(window.supabase){/* client is initialized after configuration */}
+async function loadDevices(){const {data,error}=await sb.from('devices').select('id,device_code,name,created_at,last_seen').order('created_at',{ascending:false});if(error){msg('toast',error.message);return}devices=data||[];renderDevices()}
+function renderDevices(){const list=$('deviceList'),sel=$('targetDevice');list.innerHTML='';sel.innerHTML='';if(!devices.length)list.innerHTML='<p class="muted">No displays registered yet. Select Add display to create your first device.</p>';devices.forEach(d=>{const card=document.createElement('div');card.className='device';const title=document.createElement('strong');title.textContent=d.name;const code=document.createElement('div');code.className='muted small';code.textContent='Device code: '+d.device_code;const status=document.createElement('div');status.className='status';status.textContent=d.last_seen?'Last seen: '+new Date(d.last_seen).toLocaleString():'Not connected yet';card.append(title,code,status);list.append(card);const o=document.createElement('option');o.value=d.id;o.textContent=d.name;sel.append(o)})}
+$('addDevice').onclick=async()=>{const name=prompt('Name this display (e.g. Auction Screen 01):');if(!name)return;const raw=token(),code=crypto.randomUUID();const hash=await sha256(raw);const {data,error}=await sb.from('devices').insert({name,device_code:code,token_hash:hash}).select('id').single();if(error){alert(error.message);return}alert('SAVE THESE DEVICE CREDENTIALS NOW. The token is shown only once.\n\nDevice code:\n'+code+'\n\nDevice token:\n'+raw+'\n\nYou will enter both into the ESP32 firmware.');await loadDevices()};
+$('sendCommand').onclick=async()=>{const device=devices.find(d=>d.id===$('targetDevice').value);if(!device){msg('commandMsg','Add a display first.');return}const type=$('commandType').value,val=$('commandValue').value.trim();let payload={type};if(type==='set_item_id'){if(!/^\d{9,14}$/.test(val)){msg('commandMsg','Enter a valid 9–14 digit eBay item ID.');return}payload.item_id=val}else if(type==='set_brightness'){const n=Number(val);if(!Number.isInteger(n)||n<5||n>255){msg('commandMsg','Brightness must be between 5 and 255.');return}payload.value=n}else if(type==='set_price'||type==='set_text'){if(!val){msg('commandMsg','Enter a value.');return}payload.value=val}else if(type==='refresh'){/* no extra data */}
+const {error}=await sb.from('commands').insert({device_id:device.id,payload});msg('commandMsg',error?error.message:'Command queued. It will be applied when the ESP32 cloud polling integration is installed.');$('commandValue').value=''};
+$('commandType').onchange=()=>{const t=$('commandType').value;show('commandValueWrap',t!=='refresh');$('commandValue').placeholder=t==='set_item_id'?'eBay item ID':t==='set_brightness'?'5–255':t==='set_price'?'e.g. 149.99':'Display text'};
+if(window.supabase){/* auth state listener is attached after successful connect */}
+</script></body></html>
