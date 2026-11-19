@@ -1,55 +1,257 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5faf6">
 <title>Display Control Center</title>
 <style>
-:root{font-family:Inter,system-ui,Arial,sans-serif;color:#eaf0f7;background:#0b1220}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1000px;margin:auto;padding:28px 18px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px}.brand{font-size:22px;font-weight:800;letter-spacing:-.5px}.muted{color:#9baabd}.panel{background:#121d2e;border:1px solid #26364d;border-radius:16px;padding:20px;margin:14px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}input,select,button{font:inherit;border-radius:9px;padding:11px 12px;border:1px solid #34465f;background:#0d1727;color:#eaf0f7;width:100%;margin:5px 0}button{background:#2563eb;border:0;font-weight:700;cursor:pointer}button.secondary{background:#26364d}button.danger{background:#783b45}.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}.hidden{display:none!important}.device{border:1px solid #2b3b52;border-radius:12px;padding:14px}.status{font-size:12px;color:#a9d9bb}.token{font-family:monospace;overflow-wrap:anywhere;background:#0a1320;padding:10px;border-radius:8px}.notice{padding:12px;background:#172a43;border-radius:10px;color:#c9d8eb}.small{font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{width:auto;flex:1;min-width:100px}.credential{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:8px 0}.credential .token{min-width:0;overflow-wrap:anywhere}.credential button{width:auto;white-space:nowrap;margin:0}.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:18px;z-index:10}.modalCard{width:min(620px,100%);max-height:90vh;overflow:auto;background:#121d2e;border:1px solid #34465f;border-radius:16px;padding:22px;box-shadow:0 20px 60px #0009}.copyStatus{min-height:20px;color:#a9d9bb;font-size:13px}.modal.hidden{display:none!important}@media(max-width:520px){.credential{grid-template-columns:1fr}.credential button{width:100%}}
+:root{
+  --ink:#17251d;--muted:#718078;--green:#176b45;--green2:#218653;
+  --lime:#b7ef55;--lime-soft:#eff9d9;--bg:#f4f8f4;--white:#fff;
+  --line:#e2ebe4;--shadow:0 12px 32px rgba(24,61,39,.07);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.shell{min-height:100vh;display:grid;grid-template-columns:248px minmax(0,1fr)}
+.sidebar{background:#123e2c;color:#f4fff6;padding:28px 18px;display:flex;flex-direction:column;gap:30px}
+.brand{display:flex;align-items:center;gap:11px;font-weight:850;letter-spacing:-.5px;font-size:16px;line-height:1.2}
+.brandmark{width:38px;height:38px;border-radius:12px;background:var(--lime);display:grid;place-items:center;color:#16432e;font-weight:900;font-size:20px}
+.side-label{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#9cc4aa;margin:0 10px 9px}
+.nav{display:grid;gap:6px}
+.nav a{color:#d7e9dc;text-decoration:none;padding:11px 12px;border-radius:10px;font-size:13px;display:flex;gap:11px;align-items:center}
+.nav a.active,.nav a:hover{background:#24583e;color:white}
+.nav-icon{width:19px;text-align:center;font-size:16px}
+.sidebar-note{margin-top:auto;border:1px solid #38684c;background:#194a34;border-radius:14px;padding:14px;font-size:12px;color:#c4ddca;line-height:1.5}
+.sidebar-note strong{display:block;color:#efffe9;margin-bottom:5px}
+.main{min-width:0;padding:28px clamp(18px,4vw,48px) 48px;max-width:1500px;width:100%;margin:0 auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:30px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green2);font-weight:800}
+h1{font-size:clamp(25px,3vw,34px);letter-spacing:-1.2px;margin:5px 0 6px}
+.subtitle{color:var(--muted);font-size:13px}
+.top-actions{display:flex;gap:9px;align-items:center}
+.user-pill{border:1px solid var(--line);background:white;border-radius:99px;padding:9px 13px;font-size:12px;color:#53645a}
+.btn{border:0;border-radius:10px;padding:11px 15px;font-size:13px;font-weight:750;background:var(--green);color:white;box-shadow:0 4px 10px #176b4522}
+.btn:hover{background:#105a39}
+.btn.lime{background:var(--lime);color:#173b27;box-shadow:none}
+.btn.ghost{background:white;border:1px solid var(--line);color:#31513d;box-shadow:none}
+.btn.small{padding:8px 11px;font-size:12px}
+.btn.full{width:100%}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:22px}
+.stat{background:white;border:1px solid var(--line);border-radius:16px;padding:17px 18px;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;color:var(--muted);font-weight:650}
+.stat-value{font-size:26px;font-weight:850;letter-spacing:-1px;margin-top:7px}
+.stat-foot{font-size:11px;color:#849188;margin-top:3px}
+.content-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,.85fr);gap:17px;align-items:start}
+.panel{background:white;border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:var(--shadow);margin-bottom:17px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.panel h2{font-size:16px;letter-spacing:-.35px;margin:0}
+.panel-desc{font-size:12px;color:var(--muted);margin:5px 0 0}
+.device-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.device{border:1px solid var(--line);border-radius:14px;padding:15px;background:linear-gradient(145deg,#fff,#fbfdfb);min-width:0}
+.device-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:14px}
+.device-symbol{width:37px;height:37px;border-radius:11px;background:var(--lime-soft);display:grid;place-items:center;font-size:18px}
+.pill{font-size:10px;font-weight:800;border-radius:99px;padding:6px 9px;background:#f0f3f1;color:#758078}
+.pill.online{background:#e8f7eb;color:#247342}
+.pill.offline{background:#fff1e8;color:#a45c2a}
+.device-name{font-size:14px;font-weight:800;overflow-wrap:anywhere}
+.device-code{font:10px ui-monospace,monospace;color:#829087;overflow-wrap:anywhere;margin:6px 0 11px}
+.device-last{font-size:11px;color:var(--muted);margin-bottom:12px}
+.device .btn{margin-top:4px}
+.empty{border:1px dashed #cbd9ce;border-radius:14px;padding:25px;text-align:center;color:var(--muted);font-size:13px;grid-column:1/-1}
+.empty strong{display:block;color:var(--ink);font-size:14px;margin-bottom:5px}
+.field{display:block;margin:12px 0}
+.field span{display:block;font-size:11px;font-weight:750;color:#526259;margin-bottom:6px}
+input,select{width:100%;border:1px solid #dce6de;background:#fbfdfb;color:var(--ink);padding:11px 12px;border-radius:10px;outline:none}
+input:focus,select:focus{border-color:#69a77b;box-shadow:0 0 0 3px #b7ef5533}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.message{font-size:12px;color:var(--muted);min-height:18px;margin:10px 0 0}
+.message.good{color:#247342}
+.message.bad{color:#b34e38}
+.notice{background:#f0f8e6;border:1px solid #dfefc9;color:#45613b;padding:12px;border-radius:11px;font-size:12px;line-height:1.5}
+.auth-wrap{max-width:520px;margin:8vh auto}
+.auth-wrap .panel{padding:28px}
+.auth-brand{margin-bottom:20px}
+.modal{position:fixed;inset:0;background:#102016aa;display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}
+.modal-card{width:min(590px,100%);max-height:90vh;overflow:auto;background:white;border-radius:18px;padding:24px;box-shadow:0 24px 70px #0003}
+.modal-card h2{margin:0 0 10px}
+.credential{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:7px 0 14px}
+.token{font:12px ui-monospace,monospace;overflow-wrap:anywhere;background:#f3f7f3;border:1px solid var(--line);padding:11px;border-radius:9px}
+.copy-status{font-size:12px;color:var(--green);min-height:20px}
+.auth-screen{min-height:100vh;display:grid;place-items:center;padding:20px}
+.auth-screen .panel{width:min(500px,100%)}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.sidebar{padding:14px 18px;gap:12px}.sidebar .nav{display:flex;flex-wrap:wrap}.side-label,.sidebar-note{display:none}.main{padding-top:22px}.content-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}.topbar{align-items:flex-start;flex-direction:column}.top-actions{width:100%}.top-actions .btn{flex:1}.form-row{grid-template-columns:1fr}.panel{padding:16px}.credential{grid-template-columns:1fr}.credential button{width:100%}}
 </style>
 </head>
-<body><main class="wrap">
-<header><div><div class="brand">DISPLAY CONTROL CENTER</div><div class="muted small">Private prototype · Cloud-connected ESP32 displays</div></div><button id="logout" class="secondary hidden" style="width:auto">Sign out</button></header>
-<section id="setup" class="panel">
-<h2>Connect your Supabase project</h2><p class="muted">Enter your Supabase project URL and publishable anon key. These are public client settings; never put a service-role key here.</p>
-<label>Project URL<input id="projectUrl" placeholder="https://your-project.supabase.co"></label>
-<label>Publishable anon key<input id="anonKey" placeholder="sb_publishable_... or legacy anon key"></label>
-<button id="saveConfig">Connect</button><p class="muted small">This prototype keeps these two public settings in this browser's local storage.</p>
+<body>
+<section id="setup" class="auth-screen hidden">
+  <div class="panel">
+    <div class="brand auth-brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div>
+    <div class="eyebrow">Initial setup</div><h1>Connect your cloud project</h1>
+    <p class="subtitle">Enter your Supabase project URL and publishable key. Never use a service-role key here.</p>
+    <label class="field"><span>Supabase project URL</span><input id="projectUrl" placeholder="https://your-project.supabase.co"></label>
+    <label class="field"><span>Publishable anon key</span><input id="anonKey" placeholder="sb_publishable_... or legacy anon key"></label>
+    <button id="saveConfig" class="btn full">Connect project</button>
+    <p class="message">These public settings are saved only in this browser.</p>
+  </div>
 </section>
-<section id="auth" class="panel hidden"><h2>Administrator sign in</h2><p class="muted">Use your email and password. For your private test project, email confirmation can be disabled in Supabase so creating your account does not consume email sends.</p><input id="email" type="email" placeholder="you@example.com" autocomplete="email"><input id="password" type="password" placeholder="Choose a password (at least 6 characters)" autocomplete="current-password"><div class="row"><button id="createAccount">Create account</button><button id="passwordSignIn" class="secondary">Sign in</button></div><details style="margin-top:12px"><summary class="muted small">Use the original email sign-in instead</summary><button id="sendLink" class="secondary">Send sign-in link</button></details><p id="authMsg" class="muted small"></p></section>
-<section id="app" class="hidden">
-<div class="panel"><div class="row"><div><h2 style="margin:0">Your displays</h2><div class="muted small">Register a device, then use its credentials in the ESP32 firmware.</div></div><button id="addDevice" style="max-width:180px">＋ Add display</button></div><div id="deviceList" class="grid" style="margin-top:16px"></div></div>
-<div class="panel"><h2>Send a command</h2><p class="muted small">Commands are queued in the cloud. The ESP32 firmware integration is the next step; the current Arduino sketch does not yet poll this queue.</p><label>Display<select id="targetDevice"></select></label><label>Command<select id="commandType"><option value="set_item_id">Change eBay item ID</option><option value="refresh">Refresh eBay listing</option><option value="set_brightness">Set brightness</option><option value="set_price">Set custom price (firmware update required)</option><option value="set_text">Set custom text (firmware update required)</option></select></label><div id="commandValueWrap"><label>Value<input id="commandValue" placeholder="Enter item ID, price, brightness, or text"></label></div><button id="sendCommand">Queue command</button><p id="commandMsg" class="muted small"></p></div>
+
+<section id="auth" class="auth-screen hidden">
+  <div class="panel">
+    <div class="brand auth-brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div>
+    <div class="eyebrow">Welcome back</div><h1>Your displays, in control.</h1>
+    <p class="subtitle">Sign in to manage your connected displays.</p>
+    <label class="field"><span>Email address</span><input id="email" type="email" placeholder="you@example.com" autocomplete="email"></label>
+    <label class="field"><span>Password</span><input id="password" type="password" placeholder="Your password" autocomplete="current-password"></label>
+    <div class="form-row"><button id="createAccount" class="btn">Create account</button><button id="passwordSignIn" class="btn ghost">Sign in</button></div>
+    <details style="margin-top:15px"><summary class="subtitle">Use email sign-in link</summary><button id="sendLink" class="btn ghost full" style="margin-top:10px">Send sign-in link</button></details>
+    <p id="authMsg" class="message"></p>
+    <p class="notice">For a private test project, email confirmation can be disabled in Supabase Authentication settings if needed.</p>
+  </div>
 </section>
-<div id="toast" class="muted small"></div>
-</main>
-<div id="credentialModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="credentialTitle"><div class="modalCard"><h2 id="credentialTitle">Display registered successfully</h2><p class="notice">Copy and safely save both values now. The device token is shown only once and cannot be recovered from the dashboard later.</p><label>Device code<div class="credential"><div id="newDeviceCode" class="token"></div><button type="button" class="secondary" id="copyDeviceCode">Copy code</button></div></label><label>Device token<div class="credential"><div id="newDeviceToken" class="token"></div><button type="button" class="secondary" id="copyDeviceToken">Copy token</button></div></label><p id="copyStatus" class="copyStatus" aria-live="polite"></p><button type="button" id="closeCredentialModal">I have saved both</button></div></div>
+
+<div id="app" class="shell hidden">
+  <aside class="sidebar">
+    <div class="brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div>
+    <div><p class="side-label">Workspace</p><nav class="nav"><a class="active" href="#overview"><span class="nav-icon">▦</span>Overview</a><a href="#devices"><span class="nav-icon">▣</span>My displays</a><a href="#commands"><span class="nav-icon">⌁</span>Display controls</a></nav></div>
+    <div class="sidebar-note"><strong>Simple display management</strong>Connect your screens, update listings and manage display settings from one place.</div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div><div class="eyebrow">Workspace overview</div><h1>Good to see you.</h1><div class="subtitle">Manage your displays and keep your pricing up to date.</div></div>
+      <div class="top-actions"><span class="user-pill">● Cloud dashboard</span><button id="logout" class="btn ghost small">Sign out</button></div>
+    </header>
+    <section class="stats">
+      <div class="stat"><div class="stat-label">REGISTERED DISPLAYS</div><div class="stat-value" id="statTotal">—</div><div class="stat-foot">Devices in your account</div></div>
+      <div class="stat"><div class="stat-label">ONLINE</div><div class="stat-value" id="statOnline">—</div><div class="stat-foot">Seen in the last 2 minutes</div></div>
+      <div class="stat"><div class="stat-label">NEEDS ATTENTION</div><div class="stat-value" id="statOffline">—</div><div class="stat-foot">Not recently connected</div></div>
+    </section>
+    <div class="content-grid">
+      <section id="devices" class="panel">
+        <div class="panel-head"><div><h2>My displays</h2><p class="panel-desc">Your registered screens and their connection status.</p></div><button id="addDevice" class="btn lime small">＋ Add display</button></div>
+        <div id="deviceList" class="device-grid"><div class="empty">Loading your displays…</div></div>
+        <p id="toast" class="message"></p>
+      </section>
+      <section id="commands" class="panel">
+        <div class="panel-head"><div><h2>Display controls</h2><p class="panel-desc">Send an update to one of your connected screens.</p></div></div>
+        <label class="field"><span>Select display</span><select id="targetDevice"></select></label>
+        <label class="field"><span>Action</span><select id="commandType"><option value="set_item_id">Change eBay item ID</option><option value="refresh">Refresh eBay listing</option><option value="set_brightness">Adjust brightness</option></select></label>
+        <div id="commandValueWrap"><label class="field"><span>Value</span><input id="commandValue" placeholder="Enter eBay item ID"></label></div>
+        <button id="sendCommand" class="btn full">Send to display</button>
+        <p id="commandMsg" class="message"></p>
+        <div class="notice" style="margin-top:15px">Commands are sent through the cloud and picked up by the display when it checks in.</div>
+      </section>
+    </div>
+    <p class="subtitle" style="text-align:center;margin-top:12px">Display Control Center · Private prototype</p>
+  </main>
+</div>
+
+<div id="credentialModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="credentialTitle">
+ <div class="modal-card"><div class="eyebrow">Device setup</div><h2 id="credentialTitle">Display registered successfully</h2>
+ <p class="notice">Save both values now. The device token is shown only once and cannot be recovered from the dashboard later.</p>
+ <label class="field"><span>Device code</span><div class="credential"><div id="newDeviceCode" class="token"></div><button type="button" class="btn ghost small" id="copyDeviceCode">Copy code</button></div></label>
+ <label class="field"><span>Device token</span><div class="credential"><div id="newDeviceToken" class="token"></div><button type="button" class="btn ghost small" id="copyDeviceToken">Copy token</button></div></label>
+ <p id="copyStatus" class="copy-status" aria-live="polite"></p><button type="button" id="closeCredentialModal" class="btn full">I've saved both values</button></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 let sb=null, devices=[];
 const $=id=>document.getElementById(id);
 function show(id,on=true){$(id).classList.toggle('hidden',!on)}
-function msg(id,s){$(id).textContent=s}
+function msg(id,s,kind=''){const el=$(id);el.textContent=s;el.className='message'+(kind?' '+kind:'')}
 function cfg(){return {url:localStorage.getItem('dcc_url')||'',key:localStorage.getItem('dcc_key')||''}}
 function token(){const b=new Uint8Array(32);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')}
 async function sha256(s){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(d),x=>x.toString(16).padStart(2,'0')).join('')}
-async function connect(){const c=cfg();if(!c.url||!c.key){show('setup');show('auth',false);show('app',false);return}sb=window.supabase.createClient(c.url,c.key);show('setup',false);const {data:{session}}=await sb.auth.getSession();if(session){show('auth',false);show('app');show('logout');await loadDevices()}else{show('auth');show('app',false)}}
+async function connect(){
+ const c=cfg();
+ if(!c.url||!c.key){show('setup');show('auth',false);show('app',false);$('projectUrl').value=c.url;$('anonKey').value=c.key;return}
+ sb=window.supabase.createClient(c.url,c.key);show('setup',false);
+ const {data:{session},error}=await sb.auth.getSession();
+ if(error){show('auth');show('app',false);msg('authMsg',error.message,'bad');return}
+ if(session){show('auth',false);show('app');await loadDevices()}else{show('auth');show('app',false)}
+}
 $('saveConfig').onclick=()=>{localStorage.setItem('dcc_url',$('projectUrl').value.trim());localStorage.setItem('dcc_key',$('anonKey').value.trim());connect()};
-const c=cfg();$('projectUrl').value=c.url;$('anonKey').value=c.key;
-$('createAccount').onclick=async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6){msg('authMsg','Enter your email and a password with at least 6 characters.');return}const {data,error}=await sb.auth.signUp({email,password});if(error){msg('authMsg',error.message);return}if(data.session){msg('authMsg','Account created and signed in.');show('auth',false);show('app');show('logout');await loadDevices()}else{msg('authMsg','Account request submitted. If Supabase asks for email confirmation, turn off Confirm email in Supabase Authentication settings for this private test project, then try again. If this email already has an account, tell me the exact message.')}};
-$('passwordSignIn').onclick=async()=>{const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){msg('authMsg',error.message);return}msg('authMsg','Signed in.');show('auth',false);show('app');show('logout');await loadDevices()};
-$('sendLink').onclick=async()=>{const {error}=await sb.auth.signInWithOtp({email:$('email').value.trim(),options:{emailRedirectTo:location.origin}});msg('authMsg',error?error.message:'Sign-in link sent. Check your email.')};
+$('createAccount').onclick=async()=>{
+ const email=$('email').value.trim(),password=$('password').value;
+ if(!email||password.length<6){msg('authMsg','Enter your email and a password with at least 6 characters.','bad');return}
+ const {data,error}=await sb.auth.signUp({email,password});
+ if(error){msg('authMsg',error.message,'bad');return}
+ if(data.session){msg('authMsg','Account created and signed in.','good');show('auth',false);show('app');await loadDevices()}
+ else msg('authMsg','Account request submitted. If confirmation is enabled, check your email. For this private test project, you can disable Confirm email in Supabase Authentication settings.','good');
+};
+$('passwordSignIn').onclick=async()=>{
+ const {error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+ if(error){msg('authMsg',error.message,'bad');return}
+ show('auth',false);show('app');await loadDevices();
+};
+$('sendLink').onclick=async()=>{const {error}=await sb.auth.signInWithOtp({email:$('email').value.trim(),options:{emailRedirectTo:location.origin}});msg('authMsg',error?error.message:'Sign-in link sent. Check your email.',error?'bad':'good')};
 $('logout').onclick=async()=>{await sb.auth.signOut();connect()};
-if(cfg().url&&cfg().key){connect()}else{show('setup');}
-if(window.supabase){/* client is initialized after configuration */}
-async function loadDevices(){const {data,error}=await sb.from('devices').select('id,device_code,name,created_at,last_seen').order('created_at',{ascending:false});if(error){msg('toast',error.message);return}devices=data||[];renderDevices()}
-function renderDevices(){const list=$('deviceList'),sel=$('targetDevice');list.innerHTML='';sel.innerHTML='';if(!devices.length)list.innerHTML='<p class="muted">No displays registered yet. Select Add display to create your first device.</p>';devices.forEach(d=>{const card=document.createElement('div');card.className='device';const title=document.createElement('strong');title.textContent=d.name;const code=document.createElement('div');code.className='muted small';code.textContent='Device code: '+d.device_code;const copy=document.createElement('button');copy.type='button';copy.className='secondary';copy.textContent='Copy device code';copy.style.marginTop='8px';copy.onclick=()=>copyText(d.device_code,'Device code copied.');const status=document.createElement('div');status.className='status';status.textContent=d.last_seen?'Last seen: '+new Date(d.last_seen).toLocaleString():'Not connected yet';card.append(title,code,copy,status);list.append(card);const o=document.createElement('option');o.value=d.id;o.textContent=d.name;sel.append(o)})}
-async function copyText(value,successMessage){try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(value)}else{const box=document.createElement('textarea');box.value=value;box.style.position='fixed';box.style.opacity='0';document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw new Error('Copy was blocked by this browser. Select the text and press Ctrl+C instead.')}msg('copyStatus',successMessage)}catch(e){msg('copyStatus',e.message||'Copy failed. Please select the text and press Ctrl+C.')}}
+const c=cfg();$('projectUrl').value=c.url;$('anonKey').value=c.key;
+if(c.url&&c.key)connect();else show('setup');
+
+async function loadDevices(){
+ const {data,error}=await sb.from('devices').select('id,device_code,name,created_at,last_seen').order('created_at',{ascending:false});
+ if(error){msg('toast',error.message,'bad');return}
+ devices=data||[];renderDevices();
+}
+function renderDevices(){
+ const list=$('deviceList'),sel=$('targetDevice');list.innerHTML='';sel.innerHTML='';
+ const now=Date.now(),online=d=>d.last_seen&&(now-new Date(d.last_seen).getTime()<120000);
+ const onlineCount=devices.filter(online).length;
+ $('statTotal').textContent=devices.length;$('statOnline').textContent=onlineCount;$('statOffline').textContent=devices.length-onlineCount;
+ if(!devices.length){const empty=document.createElement('div');empty.className='empty';empty.innerHTML='<strong>No displays yet</strong>Add your first screen to get started.';list.append(empty)}
+ devices.forEach(d=>{
+  const card=document.createElement('article');card.className='device';
+  const top=document.createElement('div');top.className='device-top';
+  const symbol=document.createElement('div');symbol.className='device-symbol';symbol.textContent='▣';
+  const badge=document.createElement('span');badge.className='pill '+(online(d)?'online':'offline');badge.textContent=online(d)?'● ONLINE':'● OFFLINE';
+  top.append(symbol,badge);
+  const title=document.createElement('div');title.className='device-name';title.textContent=d.name;
+  const code=document.createElement('div');code.className='device-code';code.textContent='CODE · '+d.device_code;
+  const last=document.createElement('div');last.className='device-last';last.textContent=d.last_seen?'Last seen '+new Date(d.last_seen).toLocaleString():'Has not checked in yet';
+  const copy=document.createElement('button');copy.type='button';copy.className='btn ghost small';copy.textContent='Copy device code';copy.onclick=()=>copyText(d.device_code,'Device code copied.');
+  card.append(top,title,code,last,copy);list.append(card);
+  const o=document.createElement('option');o.value=d.id;o.textContent=d.name;sel.append(o);
+ });
+}
+async function copyText(value,successMessage){
+ try{
+  if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(value);
+  else{const box=document.createElement('textarea');box.value=value;box.style.position='fixed';box.style.opacity='0';document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw new Error('Copy was blocked. Select the text and press Ctrl+C.')}
+  $('copyStatus').textContent=successMessage;
+ }catch(e){$('copyStatus').textContent=e.message||'Copy failed. Select the text and press Ctrl+C.'}
+}
 $('copyDeviceCode').onclick=()=>copyText($('newDeviceCode').textContent,'Device code copied!');
 $('copyDeviceToken').onclick=()=>copyText($('newDeviceToken').textContent,'Device token copied! Keep it private.');
 $('closeCredentialModal').onclick=()=>show('credentialModal',false);
-$('addDevice').onclick=async()=>{const name=prompt('Name this display (e.g. Auction Screen 01):');if(!name)return;const raw=token(),code=crypto.randomUUID();const hash=await sha256(raw);const {data,error}=await sb.from('devices').insert({name,device_code:code,token_hash:hash}).select('id').single();if(error){alert(error.message);return}$('newDeviceCode').textContent=code;$('newDeviceToken').textContent=raw;msg('copyStatus','');show('credentialModal');await loadDevices()};
-$('sendCommand').onclick=async()=>{const device=devices.find(d=>d.id===$('targetDevice').value);if(!device){msg('commandMsg','Add a display first.');return}const type=$('commandType').value,val=$('commandValue').value.trim();let payload={type};if(type==='set_item_id'){if(!/^\d{9,14}$/.test(val)){msg('commandMsg','Enter a valid 9–14 digit eBay item ID.');return}payload.item_id=val}else if(type==='set_brightness'){const n=Number(val);if(!Number.isInteger(n)||n<5||n>255){msg('commandMsg','Brightness must be between 5 and 255.');return}payload.value=n}else if(type==='set_price'||type==='set_text'){if(!val){msg('commandMsg','Enter a value.');return}payload.value=val}else if(type==='refresh'){/* no extra data */}
-const {error}=await sb.from('commands').insert({device_id:device.id,payload});msg('commandMsg',error?error.message:'Command queued. It will be applied when the ESP32 cloud polling integration is installed.');$('commandValue').value=''};
-$('commandType').onchange=()=>{const t=$('commandType').value;show('commandValueWrap',t!=='refresh');$('commandValue').placeholder=t==='set_item_id'?'eBay item ID':t==='set_brightness'?'5–255':t==='set_price'?'e.g. 149.99':'Display text'};
-if(window.supabase){/* auth state listener is attached after successful connect */}
-</script></body></html>
+$('addDevice').onclick=async()=>{
+ const name=prompt('Name this display (e.g. Auction Screen 01):');if(!name||!name.trim())return;
+ const raw=token(),code=crypto.randomUUID(),hash=await sha256(raw);
+ const {error}=await sb.from('devices').insert({name:name.trim(),device_code:code,token_hash:hash});
+ if(error){alert(error.message);return}
+ $('newDeviceCode').textContent=code;$('newDeviceToken').textContent=raw;$('copyStatus').textContent='';show('credentialModal');await loadDevices();
+};
+$('sendCommand').onclick=async()=>{
+ const device=devices.find(d=>d.id===$('targetDevice').value);
+ if(!device){msg('commandMsg','Add a display first.','bad');return}
+ const type=$('commandType').value,val=$('commandValue').value.trim();let payload={type};
+ if(type==='set_item_id'){if(!/^\d{9,14}$/.test(val)){msg('commandMsg','Enter a valid 9–14 digit eBay item ID.','bad');return}payload.item_id=val}
+ else if(type==='set_brightness'){const n=Number(val);if(!Number.isInteger(n)||n<5||n>255){msg('commandMsg','Brightness must be between 5 and 255.','bad');return}payload.value=n}
+ const {error}=await sb.from('commands').insert({device_id:device.id,payload});
+ msg('commandMsg',error?error.message:'Command queued. Your display will apply it when it checks in.',error?'bad':'good');
+ if(!error)$('commandValue').value='';
+};
+$('commandType').onchange=()=>{
+ const t=$('commandType').value;show('commandValueWrap',t!=='refresh');
+ $('commandValue').placeholder=t==='set_item_id'?'Enter 9–14 digit eBay item ID':'Brightness from 5 to 255';
+ $('commandValue').previousElementSibling.textContent=t==='set_brightness'?'Brightness (5–255)':'Value';
+};
+</script>
+</body>
+</html>
