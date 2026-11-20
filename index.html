@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f5faf6">
+<meta name="theme-color" content="#123e2c">
+<meta name="description" content="Manage your Display Control Center screens, pricing modes and updates.">
+<meta name="application-name" content="Display Control Center">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Display Control">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Display Control Center</title>
 <style>
 :root{--ink:#17251d;--muted:#718078;--green:#176b45;--green2:#218653;--lime:#b7ef55;--lime-soft:#eff9d9;--bg:#f4f8f4;--white:#fff;--line:#e2ebe4;--shadow:0 12px 32px rgba(24,61,39,.07);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
@@ -41,6 +49,14 @@ async function saveDeviceSettings(device,mode,title,price,status){status.textCon
 $('bulkPriceUpdate').onclick=async()=>{const cards=[...$('deviceList').querySelectorAll('.device')];let queued=0,skipped=0,failed=[];msg('bulkMsg','Updating manual-price displays…');for(let i=0;i<cards.length;i++){const d=devices[i];if(!d||normalizedMode(d)!=='manual'){skipped++;continue}const inputs=cards[i].querySelectorAll('.device-settings input');const title=(inputs[0]?.value||d.manual_title||'').trim();const price=(inputs[1]?.value||'').trim();if(!price){skipped++;continue}const{error}=await sb.from('devices').update({manual_title:title||null,manual_price:price}).eq('id',d.id);if(error){failed.push(d.name+': '+error.message);continue}try{await queueCommand(d.id,{type:'set_manual_price',title,price});queued++}catch(e){failed.push(d.name+': '+e.message)}}await loadDevices();if(failed.length)msg('bulkMsg',`Queued ${queued}; skipped ${skipped}. Problems: ${failed.join(' | ')}`,'bad');else msg('bulkMsg',`Done! ${queued} manual-price display(s) updated. ${skipped} skipped (blank price or not in Manual Price mode).`,'good')};
 async function copyText(value,successMessage){try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(value);else{const box=document.createElement('textarea');box.value=value;box.style.position='fixed';box.style.opacity='0';document.body.appendChild(box);box.select();const ok=document.execCommand('copy');box.remove();if(!ok)throw new Error('Copy was blocked. Select the text and press Ctrl+C.')} $('copyStatus').textContent=successMessage}catch(e){$('copyStatus').textContent=e.message||'Copy failed. Select the text and press Ctrl+C.'}}
 $('copyDeviceCode').onclick=()=>copyText($('newDeviceCode').textContent,'Device code copied!');$('copyDeviceToken').onclick=()=>copyText($('newDeviceToken').textContent,'Device token copied! Keep it private.');$('closeCredentialModal').onclick=()=>show('credentialModal',false);$('addDevice').onclick=async()=>{const name=prompt('Name this display (e.g. Auction Screen 01):');if(!name||!name.trim())return;const raw=token(),code=crypto.randomUUID(),hash=await sha256(raw);const{error}=await sb.from('devices').insert({name:name.trim(),device_code:code,token_hash:hash});if(error){alert(error.message);return}$('newDeviceCode').textContent=code;$('newDeviceToken').textContent=raw;$('copyStatus').textContent='';show('credentialModal');await loadDevices()};
+// PWA foundation: cache the app shell for quicker repeat visits and basic offline launch.
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(error => {
+      console.warn("PWA service worker registration failed:", error);
+    });
+  });
+}
 </script>
 </body>
 </html>
