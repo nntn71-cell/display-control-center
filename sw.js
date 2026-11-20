@@ -1,4 +1,4 @@
-const CACHE_NAME = "display-control-center-shell-v1";
+const CACHE_NAME = "display-control-center-shell-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -9,10 +9,21 @@ const APP_SHELL = [
   "./icons/apple-touch-icon.png"
 ];
 
+// Safari refuses to show a cached response that came from a redirect, so rebuild it as a plain response.
+function clean(response) {
+  if (!response || !response.redirected) return response;
+  return response.blob().then(body => new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
+  }));
+}
+
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
+      // Add files one by one so a single missing icon cannot stop the service worker from installing.
+      .then(cache => Promise.all(APP_SHELL.map(path => cache.add(path).catch(() => {}))))
       .then(() => self.skipWaiting())
   );
 });
@@ -40,13 +51,13 @@ self.addEventListener("fetch", event => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          if (response.ok) {
+          if (response.ok && !response.redirected) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
           }
           return response;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() => caches.match("./index.html").then(clean))
     );
     return;
   }
