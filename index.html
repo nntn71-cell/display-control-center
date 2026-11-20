@@ -34,11 +34,46 @@
 </div><p class="subtitle" style="text-align:center;margin-top:12px">Display Control Center · Private prototype</p></main></div>
 <div id="profileModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="profileTitle"><div class="modal-card"><div class="eyebrow">Account settings</div><h2 id="profileTitle">Your profile</h2><p class="subtitle" id="profileEmail">Signed in</p><label class="field"><span>New password</span><input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters"></label><label class="field"><span>Confirm new password</span><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Enter the new password again"></label><button id="changePassword" class="btn full" type="button">Update password</button><p id="profileMsg" class="message" aria-live="polite"></p><button id="closeProfile" class="btn ghost full" type="button">Close</button></div></div>
 <div id="credentialModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="credentialTitle"><div class="modal-card"><div class="eyebrow">Device setup</div><h2 id="credentialTitle">Display registered successfully</h2><p class="notice">Save both values now. The device token is shown only once and cannot be recovered from the dashboard later.</p><label class="field"><span>Device code</span><div class="credential"><div id="newDeviceCode" class="token"></div><button type="button" class="btn ghost small" id="copyDeviceCode">Copy code</button></div></label><label class="field"><span>Device token</span><div class="credential"><div id="newDeviceToken" class="token"></div><button type="button" class="btn ghost small" id="copyDeviceToken">Copy token</button></div></label><p id="copyStatus" class="copy-status" aria-live="polite"></p><button type="button" id="closeCredentialModal" class="btn full">I've saved both values</button></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__supabaseLoadError=true"></script>
 <script>
 let sb=null,devices=[];const $=id=>document.getElementById(id);function show(id,on=true){$(id).classList.toggle('hidden',!on)}function msg(id,s,kind=''){const el=$(id);el.textContent=s;el.className='message'+(kind?' '+kind:'')}function cfg(){return{url:localStorage.getItem('dcc_url')||'',key:localStorage.getItem('dcc_key')||''}}function token(){const b=new Uint8Array(32);crypto.getRandomValues(b);return Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')}async function sha256(s){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(d),x=>x.toString(16).padStart(2,'0')).join('')}
-async function connect(){const c=cfg();if(!c.url||!c.key){show('setup');show('auth',false);show('app',false);$('projectUrl').value=c.url;$('anonKey').value=c.key;return}sb=window.supabase.createClient(c.url,c.key);show('setup',false);const{data:{session},error}=await sb.auth.getSession();if(error){show('auth');show('app',false);msg('authMsg',error.message,'bad');return}if(session){show('auth',false);show('app');$('userEmail').textContent=session.user?.email||'Cloud dashboard';await loadDevices()}else{show('auth');show('app',false)}}
-$('saveConfig').onclick=()=>{localStorage.setItem('dcc_url',$('projectUrl').value.trim());localStorage.setItem('dcc_key',$('anonKey').value.trim());connect()};$('createAccount').onclick=async()=>{const email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6){msg('authMsg','Enter your email and a password with at least 6 characters.','bad');return}const{data,error}=await sb.auth.signUp({email,password});if(error){msg('authMsg',error.message,'bad');return}if(data.session){msg('authMsg','Account created and signed in.','good');show('auth',false);show('app');$('userEmail').textContent=data?.user?.email||$('email').value.trim();await loadDevices()}else msg('authMsg','Account request submitted. If confirmation is enabled, check your email. For this private test project, you can disable Confirm email in Supabase Authentication settings.','good')};$('passwordSignIn').onclick=async()=>{const{error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){msg('authMsg',error.message,'bad');return}show('auth',false);show('app');$('userEmail').textContent=$('email').value.trim();await loadDevices()};$('sendLink').onclick=async()=>{const{error}=await sb.auth.signInWithOtp({email:$('email').value.trim(),options:{emailRedirectTo:location.origin}});msg('authMsg',error?error.message:'Sign-in link sent. Check your email.',error?'bad':'good')};$('forgotPassword').onclick=async()=>{const email=$('email').value.trim();if(!email){msg('authMsg','Enter your account email first.','bad');return}const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin});msg('authMsg',error?error.message:'Password reset email sent. Open the link in that email, then sign in and use Profile to set your new password.',error?'bad':'good')};$('openProfile').onclick=async()=>{const{data,error}=await sb.auth.getUser();if(error){msg('profileMsg',error.message,'bad');}const email=data?.user?.email||'Signed-in account';$('profileEmail').textContent=email;$('userEmail').textContent=email; $('newPassword').value='';$('confirmPassword').value='';msg('profileMsg','');show('profileModal')};$('closeProfile').onclick=()=>show('profileModal',false);$('changePassword').onclick=async()=>{const password=$('newPassword').value,confirm=$('confirmPassword').value;if(password.length<6){msg('profileMsg','Use a password with at least 6 characters.','bad');return}if(password!==confirm){msg('profileMsg','The passwords do not match.','bad');return}const{error}=await sb.auth.updateUser({password});if(error){msg('profileMsg',error.message,'bad');return}$('newPassword').value='';$('confirmPassword').value='';msg('profileMsg','Password updated successfully.','good')};$('logout').onclick=async()=>{await sb.auth.signOut();connect()};const c=cfg();$('projectUrl').value=c.url;$('anonKey').value=c.key;if(c.url&&c.key)connect();else show('setup');
+async function connect(){
+  try {
+    const c=cfg();
+    if(!c.url||!c.key){show('setup');show('auth',false);show('app',false);$('projectUrl').value=c.url;$('anonKey').value=c.key;return}
+    show('setup',false);
+    show('auth');
+    show('app',false);
+    if(!window.supabase || typeof window.supabase.createClient!=='function'){
+      throw new Error(window.__supabaseLoadError
+        ? 'The Supabase library could not load. Check the iPhone connection or try again with Safari content blockers disabled.'
+        : 'The Supabase library is not available in this browser. Try reloading the page.');
+    }
+    sb=window.supabase.createClient(c.url,c.key);
+    const result=await sb.auth.getSession();
+    if(result.error) throw result.error;
+    const session=result.data?.session;
+    if(session){show('auth',false);show('app');$('userEmail').textContent=session.user?.email||'Cloud dashboard';await loadDevices()}
+    else {show('auth');show('app',false)}
+  } catch(e) {
+    console.error('Display Control connection error:',e);
+    show('auth');show('app',false);
+    msg('authMsg','Connection diagnostic: '+(e?.message||String(e)),'bad');
+  }
+}
+function authError(action,e){
+  console.error('Display Control '+action+' error:',e);
+  const detail=e?.message||e?.error_description||e?.name||String(e);
+  msg('authMsg',action+' failed: '+detail,'bad');
+}
+function ensureClient(){
+  if(!sb || !sb.auth) throw new Error('Supabase is not connected. Reload the page and try again.');
+}
+$('saveConfig').onclick=()=>{try{localStorage.setItem('dcc_url',$('projectUrl').value.trim());localStorage.setItem('dcc_key',$('anonKey').value.trim());connect()}catch(e){authError('Saving browser settings',e)}};
+$('createAccount').onclick=async()=>{try{ensureClient();const email=$('email').value.trim(),password=$('password').value;if(!email||password.length<6){msg('authMsg','Enter your email and a password with at least 6 characters.','bad');return}const{data,error}=await sb.auth.signUp({email,password});if(error)throw error;if(data.session){msg('authMsg','Account created and signed in.','good');show('auth',false);show('app');$('userEmail').textContent=data?.user?.email||$('email').value.trim();await loadDevices()}else msg('authMsg','Account request submitted. If confirmation is enabled, check your email. For this private test project, you can disable Confirm email in Supabase Authentication settings.','good')}catch(e){authError('Create account',e)}};
+$('passwordSignIn').onclick=async()=>{try{ensureClient();const{data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;show('auth',false);show('app');$('userEmail').textContent=data?.user?.email||$('email').value.trim();await loadDevices()}catch(e){authError('Sign in',e)}};
+$('sendLink').onclick=async()=>{try{ensureClient();const{error}=await sb.auth.signInWithOtp({email:$('email').value.trim(),options:{emailRedirectTo:location.origin}});if(error)throw error;msg('authMsg','Sign-in link sent. Check your email.','good')}catch(e){authError('Email sign-in link',e)}};
+$('forgotPassword').onclick=async()=>{try{ensureClient();const email=$('email').value.trim();if(!email){msg('authMsg','Enter your account email first.','bad');return}const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin});if(error)throw error;msg('authMsg','Password reset email sent. Open the link in that email, then sign in and use Profile to set your new password.','good')}catch(e){authError('Password reset',e)}};;$('openProfile').onclick=async()=>{const{data,error}=await sb.auth.getUser();if(error){msg('profileMsg',error.message,'bad');}const email=data?.user?.email||'Signed-in account';$('profileEmail').textContent=email;$('userEmail').textContent=email; $('newPassword').value='';$('confirmPassword').value='';msg('profileMsg','');show('profileModal')};$('closeProfile').onclick=()=>show('profileModal',false);$('changePassword').onclick=async()=>{const password=$('newPassword').value,confirm=$('confirmPassword').value;if(password.length<6){msg('profileMsg','Use a password with at least 6 characters.','bad');return}if(password!==confirm){msg('profileMsg','The passwords do not match.','bad');return}const{error}=await sb.auth.updateUser({password});if(error){msg('profileMsg',error.message,'bad');return}$('newPassword').value='';$('confirmPassword').value='';msg('profileMsg','Password updated successfully.','good')};$('logout').onclick=async()=>{await sb.auth.signOut();connect()};const c=cfg();$('projectUrl').value=c.url;$('anonKey').value=c.key;if(c.url&&c.key)connect();else show('setup');
 async function loadDevices(){const{data,error}=await sb.from('devices').select('id,device_code,name,created_at,last_seen,display_mode,manual_title,manual_price').order('created_at',{ascending:false});if(error){msg('toast',error.message,'bad');return}devices=data||[];renderDevices()}
 function normalizedMode(d){return d.display_mode==='manual'?'manual':d.display_mode==='auction'?'auction':'ebay_fixed'}
 function addField(parent,labelText,tag,attrs={}){const wrap=document.createElement('label');wrap.className='field';const span=document.createElement('span');span.textContent=labelText;const el=document.createElement(tag);Object.entries(attrs).forEach(([k,v])=>{if(k==='value')el.value=v;else if(k==='placeholder')el.placeholder=v;else el.setAttribute(k,v)});wrap.append(span,el);parent.append(wrap);return el}
@@ -57,6 +92,22 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     });
   });
 }
+
+// Surface browser-level failures during mobile troubleshooting.
+window.addEventListener('error', function(event) {
+  console.error('Display Control browser error:', event.error || event.message);
+  const authScreen = $('auth');
+  if (authScreen && !authScreen.classList.contains('hidden')) {
+    msg('authMsg', 'Browser diagnostic: '+(event.message || 'A script failed to run. Check the browser console.'), 'bad');
+  }
+});
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('Display Control unhandled promise:', event.reason);
+  const authScreen = $('auth');
+  if (authScreen && !authScreen.classList.contains('hidden')) {
+    msg('authMsg', 'Browser diagnostic: '+(event.reason?.message || String(event.reason)), 'bad');
+  }
+});
 </script>
 </body>
 </html>
