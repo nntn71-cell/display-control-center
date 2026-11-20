@@ -24,6 +24,14 @@ export async function onRequest({ request }) {
   headers.delete("host");
   headers.delete("origin");
   headers.delete("referer");
+    const apiKey = headers.get("apikey") || "";
+
+  if (
+    apiKey.startsWith("sb_publishable_") &&
+    headers.get("authorization") === "Bearer " + apiKey
+  ) {
+    headers.delete("authorization");
+  }
 
   const options = {
     method: request.method,
