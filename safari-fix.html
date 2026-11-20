@@ -84,15 +84,15 @@ $('connectionTest').onclick=async()=>{
   try {
     const c=cfg();
     if(!c.url||!c.key) throw new Error('Project URL or public key is missing in this browser.');
-    msg('authMsg','Testing direct connection to Supabase…');
-    const response=await fetch(c.url.replace(/\/$/,'')+'/auth/v1/settings',{
+    msg('authMsg','Testing connection through Cloudflare proxy…');
+    const response=await fetch('/api/supabase-proxy/auth/v1/settings',{
       method:'GET',
       headers:{'apikey':c.key,'Authorization':'Bearer '+c.key}
     });
     const body=await response.text();
     console.log('Supabase direct connection test:',response.status,body);
     if(!response.ok) throw new Error('Supabase replied with HTTP '+response.status+': '+body.slice(0,240));
-    msg('authMsg','Connection test passed (HTTP '+response.status+'). Safari can make authenticated requests to Supabase.','good');
+    msg('authMsg','Connection test passed (HTTP '+response.status+'). Safari can make authenticated requests through the Cloudflare proxy.','good');
   } catch(e) {
     console.error('Supabase direct connection test failed:',e);
     const detail=[e?.name,e?.message,e?.cause?.message].filter(Boolean).join(' — ')||String(e);
