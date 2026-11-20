@@ -67,32 +67,22 @@ function authError(action,e){
   msg('authMsg',action+' failed: '+detail,'bad');
 }
 $('connectionTest').onclick=async()=>{
-  const c=cfg();
-  if(!c.url||!c.key){msg('authMsg','Project URL or public key is missing in this browser.','bad');return}
-  const base=c.url.replace(/\\/$/,'')+'/auth/v1/settings';
-  msg('authMsg','Test 1 of 2: checking a simple request…');
   try {
-    const simple=await fetch(base+'?apikey='+encodeURIComponent(c.key),{method:'GET'});
-    const simpleBody=await simple.text();
-    console.log('Simple Supabase request:',simple.status,simpleBody);
-    if(!simple.ok) throw new Error('Simple request returned HTTP '+simple.status+': '+simpleBody.slice(0,180));
-    msg('authMsg','Test 1 PASSED (HTTP '+simple.status+'). Test 2: checking requests with authentication headers…');
+    const c=cfg();
+    if(!c.url||!c.key) throw new Error('Project URL or public key is missing in this browser.');
+    msg('authMsg','Testing direct connection to Supabase…');
+    const response=await fetch(c.url.replace(/\/$/,'')+'/auth/v1/settings',{
+      method:'GET',
+      headers:{'apikey':c.key,'Authorization':'Bearer '+c.key}
+    });
+    const body=await response.text();
+    console.log('Supabase direct connection test:',response.status,body);
+    if(!response.ok) throw new Error('Supabase replied with HTTP '+response.status+': '+body.slice(0,240));
+    msg('authMsg','Connection test passed (HTTP '+response.status+'). Safari can make authenticated requests to Supabase.','good');
   } catch(e) {
-    console.error('Simple Supabase request failed:',e);
+    console.error('Supabase direct connection test failed:',e);
     const detail=[e?.name,e?.message,e?.cause?.message].filter(Boolean).join(' — ')||String(e);
-    msg('authMsg','Test 1 FAILED: '+detail+'. Safari could not complete even a simple request.','bad');
-    return;
-  }
-  try {
-    const headed=await fetch(base,{method:'GET',headers:{'apikey':c.key,'Authorization':'Bearer '+c.key}});
-    const headedBody=await headed.text();
-    console.log('Header Supabase request:',headed.status,headedBody);
-    if(!headed.ok) throw new Error('Header request returned HTTP '+headed.status+': '+headedBody.slice(0,180));
-    msg('authMsg','BOTH TESTS PASSED. Simple request and authentication-header request both reached Supabase.','good');
-  } catch(e) {
-    console.error('Header Supabase request failed:',e);
-    const detail=[e?.name,e?.message,e?.cause?.message].filter(Boolean).join(' — ')||String(e);
-    msg('authMsg','TEST 1 PASSED, TEST 2 FAILED: '+detail+'. This points to a problem with the cross-origin authentication headers or their preflight request.','bad');
+    msg('authMsg','Connection test failed: '+detail,'bad');
   }
 };
 function ensureClient(){
