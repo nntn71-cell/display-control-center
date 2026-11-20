@@ -24,7 +24,7 @@
 </head>
 <body>
 <section id="setup" class="auth-screen hidden"><div class="panel"><div class="brand auth-brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div><div class="eyebrow">Initial setup</div><h1>Connect your cloud project</h1><p class="subtitle">Enter your Supabase project URL and publishable key. Never use a service-role key here.</p><label class="field"><span>Supabase project URL</span><input id="projectUrl" placeholder="https://your-project.supabase.co"></label><label class="field"><span>Publishable anon key</span><input id="anonKey" placeholder="sb_publishable_... or legacy anon key"></label><button id="saveConfig" class="btn full">Connect project</button><p class="message">These public settings are saved only in this browser.</p></div></section>
-<section id="auth" class="auth-screen hidden"><div class="panel"><div class="brand auth-brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div><div class="eyebrow">Welcome back</div><h1>Your displays, in control.</h1><p class="subtitle">Sign in to manage your connected displays.</p><label class="field"><span>Email address</span><input id="email" type="email" placeholder="you@example.com" autocomplete="email"></label><label class="field"><span>Password</span><input id="password" type="password" placeholder="Your password" autocomplete="current-password"></label><div class="form-row"><button id="createAccount" class="btn">Create account</button><button id="passwordSignIn" class="btn ghost">Sign in</button></div><button id="forgotPassword" type="button" class="btn ghost full" style="margin-top:10px">Forgot password?</button><details style="margin-top:15px"><summary class="subtitle">Use email sign-in link</summary><button id="sendLink" class="btn ghost full" style="margin-top:10px">Send sign-in link</button></details><p id="authMsg" class="message"></p><p class="notice">For a private test project, email confirmation can be disabled in Supabase Authentication settings if needed.</p></div></section>
+<section id="auth" class="auth-screen hidden"><div class="panel"><div class="brand auth-brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div><div class="eyebrow">Welcome back</div><h1>Your displays, in control.</h1><p class="subtitle">Sign in to manage your connected displays.</p><label class="field"><span>Email address</span><input id="email" type="email" placeholder="you@example.com" autocomplete="email"></label><label class="field"><span>Password</span><input id="password" type="password" placeholder="Your password" autocomplete="current-password"></label><div class="form-row"><button id="createAccount" class="btn">Create account</button><button id="passwordSignIn" class="btn ghost">Sign in</button></div><button id="forgotPassword" type="button" class="btn ghost full" style="margin-top:10px">Forgot password?</button><details style="margin-top:15px"><summary class="subtitle">Use email sign-in link</summary><button id="sendLink" class="btn ghost full" style="margin-top:10px">Send sign-in link</button></details><p id="authMsg" class="message"></p><button id="connectionTest" type="button" class="btn ghost full" style="margin-top:8px">Run connection test</button><p class="notice">For a private test project, email confirmation can be disabled in Supabase Authentication settings if needed.</p></div></section>
 <div id="app" class="shell hidden"><aside class="sidebar"><div class="brand"><div class="brandmark">D</div><div>DISPLAY CONTROL<br> CENTER</div></div><div><p class="side-label">Workspace</p><nav class="nav"><a class="active" href="#overview"><span class="nav-icon">▦</span>Overview</a><a href="#devices"><span class="nav-icon">▣</span>My displays</a></nav></div><div class="sidebar-note"><strong>Simple display management</strong>Connect your screens, update listings and manage display settings from one place.</div></aside>
 <main class="main"><header class="topbar"><div><div class="eyebrow">Workspace overview</div><h1>Good to see you.</h1><div class="subtitle">Manage your displays and keep your pricing up to date.</div></div><div class="top-actions"><span class="user-pill" id="userEmail">● Cloud dashboard</span><button id="openProfile" class="btn ghost small">Profile</button><button id="logout" class="btn ghost small">Sign out</button></div></header>
 <section class="stats"><div class="stat"><div class="stat-label">REGISTERED DISPLAYS</div><div class="stat-value" id="statTotal">—</div><div class="stat-foot">Devices in your account</div></div><div class="stat"><div class="stat-label">ONLINE</div><div class="stat-value" id="statOnline">—</div><div class="stat-foot">Seen in the last 2 minutes</div></div><div class="stat"><div class="stat-label">NEEDS ATTENTION</div><div class="stat-value" id="statOffline">—</div><div class="stat-foot">Not recently connected</div></div></section>
@@ -63,9 +63,28 @@ async function connect(){
 }
 function authError(action,e){
   console.error('Display Control '+action+' error:',e);
-  const detail=e?.message||e?.error_description||e?.name||String(e);
+  const detail=[e?.name,e?.message,e?.cause?.message].filter(Boolean).join(' — ')||String(e);
   msg('authMsg',action+' failed: '+detail,'bad');
 }
+$('connectionTest').onclick=async()=>{
+  try {
+    const c=cfg();
+    if(!c.url||!c.key) throw new Error('Project URL or public key is missing in this browser.');
+    msg('authMsg','Testing direct connection to Supabase…');
+    const response=await fetch(c.url.replace(/\/$/,'')+'/auth/v1/settings',{
+      method:'GET',
+      headers:{'apikey':c.key,'Authorization':'Bearer '+c.key}
+    });
+    const body=await response.text();
+    console.log('Supabase direct connection test:',response.status,body);
+    if(!response.ok) throw new Error('Supabase replied with HTTP '+response.status+': '+body.slice(0,240));
+    msg('authMsg','Connection test passed (HTTP '+response.status+'). Safari can make authenticated requests to Supabase.','good');
+  } catch(e) {
+    console.error('Supabase direct connection test failed:',e);
+    const detail=[e?.name,e?.message,e?.cause?.message].filter(Boolean).join(' — ')||String(e);
+    msg('authMsg','Connection test failed: '+detail,'bad');
+  }
+};
 function ensureClient(){
   if(!sb || !sb.auth) throw new Error('Supabase is not connected. Reload the page and try again.');
 }
