@@ -1,1 +1,59 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safari Connection Fix</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 25px; line-height: 1.5; }
+    #result { margin-top: 20px; padding: 15px; background: #f1f1f1; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Safari Connection Test</h2>
+  <p>Checking the secure connection to your display dashboard...</p>
+  <div id="result">Testing...</div>
+
+  <script>
+    async function testConnection() {
+      const result = document.getElementById("result");
+
+      try {
+        const key = localStorage.getItem("dcc_key");
+
+        if (!key) {
+          throw new Error("No saved Supabase key found. Open your main dashboard in regular Safari first.");
+        }
+
+        const response = await fetch(
+          "/api/supabase-proxy/auth/v1/settings",
+          {
+            method: "GET",
+            headers: {
+              "apikey": key,
+              "Authorization": "Bearer " + key,
+              "Accept": "application/json"
+            },
+            cache: "no-store"
+          }
+        );
+
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error("Server returned HTTP " + response.status + ": " + message);
+        }
+
+        result.textContent =
+          "SUCCESS! Safari connected through Cloudflare to Supabase. HTTP " +
+          response.status + ".";
+      } catch (error) {
+        result.textContent = "TEST FAILED: " + error.message;
+      }
+    }
+
+    testConnection();
+  </script>
+</body>
+</html>
+
