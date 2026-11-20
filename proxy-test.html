@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Display Control - Connection Test</title>
+<style>
+body {
+  margin: 0;
+  padding: 30px 18px;
+  background: #101820;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+.panel {
+  max-width: 500px;
+  margin: 40px auto;
+  padding: 25px;
+  background: #202c38;
+  border-radius: 14px;
+}
+h1 { font-size: 23px; }
+p { color: #bdc9d5; line-height: 1.5; }
+button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 15px;
+  border: 0;
+  border-radius: 8px;
+  background: #24a36a;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+#result {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #121c25;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+</style>
+</head>
+<body>
+<div class="panel">
+  <h1>Display Control Connection Test</h1>
+  <p>This test checks the connection through Cloudflare.</p>
+  <button id="test">Run connection test</button>
+  <div id="result">Ready to test.</div>
+</div>
+
+<script>
+document.getElementById("test").onclick = async function () {
+  const result = document.getElementById("result");
+  result.textContent = "Testing Cloudflare connection...";
+
+  try {
+    const key = localStorage.getItem("dcc_key");
+
+    if (!key) {
+      throw new Error(
+        "No saved Supabase key found in this browser. Please open the main dashboard on this device first."
+      );
+    }
+
+    const response = await fetch("/api/supabase-test", {
+      method: "GET",
+      headers: {
+        "x-supabase-apikey": key
+      },
+      cache: "no-store"
+    });
+
+    const body = await response.text();
+
+    if (!response.ok) {
+      throw new Error("Cloudflare returned HTTP " +
+        response.status + ": " + body);
+    }
+
+    const data = JSON.parse(body);
+
+    result.textContent =
+      "SUCCESS! Cloudflare reached Supabase. " +
+      "The connection is working. HTTP " + response.status + ".";
+
+    console.log("Supabase response:", data);
+
+  } catch (error) {
+    result.textContent = "TEST FAILED: " + error.message;
+    console.error(error);
+  }
+};
+</script>
+</body>
+</html>
